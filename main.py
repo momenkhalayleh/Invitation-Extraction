@@ -4,7 +4,10 @@ import sys
 from alembic import command
 from alembic.config import Config
 
+from app.clients.sap_client import SapClient, SapClientError
 from app.configs.run_logging import setup_logging
+from app.configs.settings import get_settings
+from app.controllers.invitation_controller import InvitationExtractionError, extract_invitations
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,6 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
         dest="date_to",
         help="Override SCRAPE_DATE_TO (YYYY-MM-DD)",
     )
+    invitations_parser.add_argument(
+        "--visible",
+        action="store_true",
+        help="Show the browser window during extraction",
+    )
 
     extract_subparsers.add_parser(
         "cases",
@@ -43,20 +51,91 @@ def build_parser() -> argparse.ArgumentParser:
     db_subparsers = db_parser.add_subparsers(dest="db_action", required=True)
     db_subparsers.add_parser("upgrade", help="Apply Alembic migrations to head")
 
+    sap_parser = subparsers.add_parser("sap", help="SAP Fiori browser automation")
+    sap_subparsers = sap_parser.add_subparsers(dest="sap_action", required=True)
+    sap_test_parser = sap_subparsers.add_parser(
+        "test",
+        help="Login to SAP and open Manage Sales Enquiries",
+    )
+    sap_test_parser.add_argument(
+        "--visible",
+        action="store_true",
+        help="Show the browser window (overrides HEADLESS=false behavior)",
+    )
+    sap_test_parser.add_argument(
+        "--from-date",
+        dest="date_from",
+        help="Optional date-from filter (YYYY-MM-DD)",
+    )
+    sap_test_parser.add_argument(
+        "--to-date",
+        dest="date_to",
+        help="Optional date-to filter (YYYY-MM-DD)",
+    )
+    sap_test_parser.add_argument(
+        "--keep-open",
+        type=int,
+        default=0,
+        help="Keep browser open for N seconds before closing",
+    )
+
     return parser
 
 
 def run_extract_invitations(args: argparse.Namespace) -> int:
     logger = setup_logging(run_name="invitations")
-    logger.info("Invitation extraction is not implemented yet (Step 4).")
-    if args.date_from or args.date_to:
-        logger.info("Date override: from=%s to=%s", args.date_from, args.date_to)
+    settings = get_settings()
+    headless = False if args.visible else settings.headless
+
+    try:
+        saved = extract_invitations(
+            date_from=args.date_from,
+            date_to=args.date_to,
+            headless=headless,
+            settings=settings,
+        )
+    except InvitationExtractionError:
+        logger.exception("Invitation extraction failed")
+        return 1
+
+    logger.info("Done. %s invitation(s) saved to database.", saved)
     return 0
 
 
 def run_extract_cases() -> int:
     logger = setup_logging(run_name="cases")
     logger.info("Case extraction is not implemented yet (Step 5).")
+    return 0
+
+
+def run_sap_test(args: argparse.Namespace) -> int:
+    logger = setup_logging(run_name="sap_test")
+    settings = get_settings()
+    date_from = args.date_from or settings.scrape_date_from
+    date_to = args.date_to or settings.scrape_date_to
+    headless = False if args.visible else settings.headless
+
+    try:
+        with SapClient(headless=headless) as client:
+            client.login()
+            logger.info("Login OK — title: %s", client.page_title)
+            client.ensure_launchpad()
+            client.navigate_to_manage_sales_enquiries()
+            logger.info("Navigation OK — URL: %s", client.current_url)
+
+            if date_from and date_to:
+                client.apply_date_filter(date_from, date_to)
+                client.click_go()
+                client.wait_for_results_table()
+            elif date_from or date_to:
+                logger.warning("Both --from-date and --to-date are required to apply a filter")
+
+            client.keep_open(args.keep_open)
+    except SapClientError:
+        logger.exception("SAP test failed")
+        return 1
+
+    logger.info("SAP test completed successfully")
     return 0
 
 
@@ -79,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_extract_cases()
     if args.command == "db" and args.db_action == "upgrade":
         return run_db_upgrade()
+    if args.command == "sap" and args.sap_action == "test":
+        return run_sap_test(args)
 
     parser.print_help()
     return 1

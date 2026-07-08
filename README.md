@@ -28,7 +28,19 @@ CREATE DATABASE al_ghanem_extraction;
 python main.py db upgrade
 ```
 
-5. Run extraction jobs:
+5. Test SAP Fiori login and navigation:
+
+```bash
+python main.py sap test --visible --keep-open 10
+```
+
+6. Run invitation extraction:
+
+```bash
+python main.py extract invitations --visible --from-date 2026-01-01 --to-date 2026-01-31
+```
+
+7. Run other extraction jobs:
 
 ```bash
 python main.py extract invitations
@@ -72,6 +84,6 @@ Stores RFQ line items in `item_data` (JSONB) until the external items field list
 
 - [x] Step 1 — Project foundation
 - [x] Step 2 — Database layer
-- [ ] Step 3 — SAP client skeleton
-- [ ] Step 4 — Invitation extraction
+- [x] Step 3 — SAP client skeleton
+- [x] Step 4 — Invitation extraction
 - [ ] Step 5 — Case + RFQ extraction

@@ -1,6 +1,7 @@
 import logging
 import time
 from collections.abc import Iterable
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
@@ -71,7 +72,14 @@ class SapClient:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
 
-        service = Service(ChromeDriverManager().install())
+        driver_path = self._resolve_chromedriver_path()
+        if driver_path:
+            logger.info("Using local ChromeDriver: %s", driver_path)
+            service = Service(driver_path)
+        else:
+            logger.warning("No local ChromeDriver found; attempting webdriver-manager download")
+            service = Service(ChromeDriverManager().install())
+
         self.driver = webdriver.Chrome(service=service, options=options)
         self.driver.implicitly_wait(0)
         logger.info("Chrome WebDriver started (headless=%s)", self.headless)
@@ -82,6 +90,25 @@ class SapClient:
         self.driver.quit()
         self.driver = None
         logger.info("Chrome WebDriver stopped")
+
+    def _resolve_chromedriver_path(self) -> str | None:
+        """Resolve ChromeDriver without network when possible (corporate SSL safe)."""
+        if self.settings.chromedriver_path:
+            configured = Path(self.settings.chromedriver_path)
+            if configured.is_file():
+                return str(configured)
+            raise SapClientError(f"CHROMEDRIVER_PATH does not exist: {configured}")
+
+        wdm_cache = Path.home() / ".wdm" / "drivers" / "chromedriver"
+        if not wdm_cache.exists():
+            return None
+
+        candidates = sorted(
+            wdm_cache.rglob("chromedriver.exe"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        return str(candidates[0]) if candidates else None
 
     def login(self) -> None:
         self._require_driver()
@@ -443,3 +470,54 @@ class SapClient:
     def _require_driver(self) -> None:
         if self.driver is None:
             raise SapClientError("WebDriver is not started. Call start() or use SapClient as a context manager.")
+
+    def wait_until_not_busy(self, timeout: int | None = None) -> None:
+        """Wait for document ready and SAP busy indicators to clear."""
+        self._require_driver()
+        wait = WebDriverWait(self.driver, timeout or self.timeout)
+        try:
+            wait.until(self._is_document_ready)
+            wait.until(self._is_sap_not_busy)
+        except TimeoutException:
+            logger.debug("Page still busy after %ss; continuing", timeout or self.timeout)
+        self._settle()
+
+    def wait_for_locators(
+        self,
+        locator_options: Iterable[tuple[str, str]],
+        label: str,
+        *,
+        clickable: bool = False,
+        timeout: int | None = None,
+        required: bool = True,
+    ) -> WebElement | None:
+        """Wait for the first matching locator to appear (or become clickable)."""
+        if clickable:
+            return self._find_clickable(locator_options, label, timeout=timeout, required=required)
+        return self._find_visible(locator_options, label, timeout=timeout, required=required)
+
+    def _settle(self) -> None:
+        delay = self.settings.sap_settle_ms / 1000
+        if delay > 0:
+            time.sleep(delay)
+
+    @staticmethod
+    def _is_document_ready(driver: WebDriver) -> bool:
+        try:
+            return driver.execute_script("return document.readyState") == "complete"
+        except Exception:
+            return True
+
+    @staticmethod
+    def _is_sap_not_busy(driver: WebDriver) -> bool:
+        busy_selectors = (
+            ".sapUiBusy",
+            ".sapUiLocalBusyIndicator",
+            ".sapUiBlockLayer",
+            "[aria-busy='true']",
+        )
+        for selector in busy_selectors:
+            for element in driver.find_elements(By.CSS_SELECTOR, selector):
+                if element.is_displayed():
+                    return False
+        return True

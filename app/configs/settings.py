@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     headless: bool = Field(default=True, validation_alias="HEADLESS")
     selenium_timeout: int = Field(default=30, validation_alias="SELENIUM_TIMEOUT")
+    chromedriver_path: Path | None = Field(default=None, validation_alias="CHROMEDRIVER_PATH")
     sap_manage_sales_enquiries_url: str | None = Field(
         default=None,
         validation_alias="SAP_MANAGE_SALES_ENQUIRIES_URL",
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
     sap_date_option: str = Field(default="From / To", validation_alias="SAP_DATE_OPTION")
     sap_max_invitations: int = Field(default=1, validation_alias="SAP_MAX_INVITATIONS")
     sap_skip_first_inquiry: bool = Field(default=False, validation_alias="SAP_SKIP_FIRST_INQUIRY")
+    sap_settle_ms: int = Field(default=300, validation_alias="SAP_SETTLE_MS")
     scrape_date_from: str | None = Field(default=None, validation_alias="SCRAPE_DATE_FROM")
     scrape_date_to: str | None = Field(default=None, validation_alias="SCRAPE_DATE_TO")
 

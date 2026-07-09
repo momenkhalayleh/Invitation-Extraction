@@ -1,7 +1,6 @@
 import logging
 
-from app.clients.database_client import get_database_client
-from app.clients.invitation_repository import upsert_invitation
+from app.clients.database_client import get_database_client, upsert_invitation
 from app.clients.sap_client import SapClient, SapClientError
 from app.clients.sap_invitation_extractor import SapInvitationExtractor
 from app.configs.settings import Settings, get_settings

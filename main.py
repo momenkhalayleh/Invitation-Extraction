@@ -4,7 +4,7 @@ import sys
 from alembic import command
 from alembic.config import Config
 
-from app.clients.sap_client import SapClient, SapClientError
+from app.controllers.selenuim_client import SapClient, SapClientError
 from app.configs.run_logging import setup_logging
 from app.configs.settings import get_settings
 from app.controllers.invitation_controller import InvitationExtractionError, extract_invitations

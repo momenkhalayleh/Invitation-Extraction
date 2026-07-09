@@ -1,10 +1,10 @@
 import logging
 
 from app.clients.database_client import get_database_client
+from app.controllers.invitation_repository import upsert_invitation
 from app.controllers.selenuim_client import SapClient, SapClientError
 from app.controllers.sap_invitation_extractor import SapInvitationExtractor
 from app.configs.settings import Settings, get_settings
-from app.controllers.invitation_repository import upsert_invitation
 from app.schemas.invitation import InvitationCreate
 
 logger = logging.getLogger("al_ghanem.extraction.invitations")

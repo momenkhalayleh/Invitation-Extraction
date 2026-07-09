@@ -16,8 +16,8 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from app.clients import sap_selectors as selectors
-from app.clients.sap_client import SapClient, SapClientError
+from app.clients import sap_selectors_config as selectors
+from app.controllers.selenuim_client import SapClient, SapClientError
 from app.schemas.invitation import InvitationCreate
 
 logger = logging.getLogger("al_ghanem.extraction.sap.invitations")

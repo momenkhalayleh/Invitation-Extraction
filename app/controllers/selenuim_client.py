@@ -15,7 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from app.clients import sap_selectors as selectors
+from app.clients import sap_selectors_config as selectors
 from app.configs.auth import SapCredentials, get_sap_credentials
 from app.configs.settings import Settings, get_settings
 

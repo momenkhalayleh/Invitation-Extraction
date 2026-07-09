@@ -1,0 +1,149 @@
+{
+  "USERNAME_FIELDS": [
+    ["id", "j_username"],
+    ["name", "j_username"],
+    ["name", "UserName"],
+    ["css selector", "input[type='email']"],
+    ["css selector", "input[name='username']"]
+  ],
+  "PASSWORD_FIELDS": [
+    ["id", "j_password"],
+    ["name", "j_password"],
+    ["name", "Password"],
+    ["css selector", "input[type='password']"]
+  ],
+  "LOGIN_SUBMIT_BUTTONS": [
+    ["css selector", "button[type='submit']"],
+    ["id", "logOnFormSubmit"],
+    ["css selector", "input[type='submit']"],
+    ["xpath", "//button[contains(., 'Continue') or contains(., 'Log') or contains(., 'Sign')]"]
+  ],
+  "FIORI_SEARCH_TOGGLES": [
+    ["id", "sf"],
+    ["css selector", "#shell-header [aria-label*='Search']"],
+    ["css selector", "button[title='Search']"],
+    ["css selector", "[id$='-search']"]
+  ],
+  "FIORI_SEARCH_FIELDS": [
+    ["id", "searchFieldInShell-input"],
+    ["css selector", "#searchFieldInShell input"],
+    ["css selector", "input[id*='searchFieldInShell']"],
+    ["css selector", "input[aria-label*='Search']"],
+    ["css selector", "input[placeholder*='Search']"]
+  ],
+  "MANAGE_INQUIRIES_TILES": [
+    ["id", "favApps-app-0-tile"],
+    ["css selector", "[id*='favApps'][id$='-tile']"]
+  ],
+  "SALES_ENQUIRY_TARGETS": [
+    ["id", "favApps-app-0-tile"],
+    ["xpath", "//*[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'manage sales inquir')]"],
+    ["xpath", "//*[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'manage sales enquir')]"],
+    ["xpath", "//*[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'sales inquir')]"]
+  ],
+  "DATE_PICKER_TOGGLES": [
+    ["xpath", "//span[@title='Open Picker']"],
+    ["css selector", "span[title='Open Picker']"],
+    ["xpath", "//button[@title='Open Picker']"]
+  ],
+  "DATE_OK_BUTTONS": [
+    ["xpath", "//button[.//bdi[normalize-space(text())='OK']]"],
+    ["xpath", "//bdi[normalize-space(text())='OK']/ancestor::button"],
+    ["css selector", "button[id*='-OK']"]
+  ],
+  "DATE_FROM_FIELDS": [
+    ["css selector", "input[placeholder*='From']"],
+    ["xpath", "//div[contains(@class,'sapMDDR')]//input[1]"],
+    ["xpath", "//label[contains(., 'From') or contains(., 'Start')]/following::input[1]"],
+    ["css selector", "input[id*='from' i]"]
+  ],
+  "DATE_TO_FIELDS": [
+    ["css selector", "input[placeholder*='To']"],
+    ["xpath", "//div[contains(@class,'sapMDDR')]//input[2]"],
+    ["xpath", "//label[contains(., 'To') or contains(., 'End')]/following::input[1]"],
+    ["css selector", "input[id*='to' i]"]
+  ],
+  "GO_BUTTONS": [
+    ["xpath", "//bdi[contains(@id,'btnGo-BDI-content')]/ancestor::button"],
+    ["xpath", "//bdi[normalize-space(text())='Go']/ancestor::button"],
+    ["xpath", "//button[.//bdi[normalize-space(text())='Go']]"],
+    ["xpath", "//button[contains(., 'Go')]"],
+    ["css selector", "button[id*='Go' i]"]
+  ],
+  "SALES_INQUIRY_LINKS": [
+    ["xpath", "//td[contains(@data-sap-ui-column,'listReport-SalesInquiry')]//a"],
+    ["xpath", "//td[contains(@data-sap-ui-column,'SalesInquiry')]//a"]
+  ],
+  "CHANGE_INQUIRY_LINKS": [
+    ["xpath", "//a[.//span[normalize-space()='Change Sales Inquiries']]"],
+    ["xpath", "//a[normalize-space()='Change Sales Inquiries']"]
+  ],
+  "RESULT_ROWS": [
+    ["css selector", "tr[data-sap-ui-rowindex]"],
+    ["css selector", "[role='row'][aria-rowindex]"],
+    ["css selector", "tbody tr"],
+    ["css selector", ".sapUiTableTr"]
+  ],
+  "BACK_BUTTONS": [
+    ["css selector", "[aria-label='Back']"],
+    ["xpath", "//button[@title='Back']"],
+    ["xpath", "//bdi[normalize-space(text())='Back']/ancestor::button"]
+  ],
+  "NEXT_PAGE_BUTTONS": [
+    ["css selector", "[title='Next Page']"],
+    ["css selector", "[aria-label*='Next']"],
+    ["xpath", "//button[contains(@aria-label,'Next')]"]
+  ],
+  "WEBGUI_ANCHORS": [
+    ["css selector", "input[title='Customer Reference']"],
+    ["xpath", "//label[contains(normalize-space(.), 'ust. Reference')]"],
+    ["xpath", "//span[contains(@class,'lsDynproTextField__text') and contains(normalize-space(.), 'ust. Reference')]"]
+  ],
+  "CUST_REFERENCE_LABELS": [
+    ["xpath", "//label[contains(normalize-space(.), 'ust. Reference')]"],
+    ["xpath", "//label[contains(normalize-space(.), 'Customer Reference')]"],
+    ["xpath", "//span[contains(@class,'lsDynproTextField__text') and contains(normalize-space(.), 'ust. Reference')]/ancestor::label[1]"]
+  ],
+  "CUST_REFERENCE_INPUT": [
+    ["css selector", "input[title='Customer Reference']"],
+    ["css selector", "input[title='Cust. Reference']"]
+  ],
+  "FORWARD_SCROLL_BUTTONS": [
+    ["css selector", "span[action='SCROLL_TO_NEXT_ITEMS']"],
+    ["css selector", "span[title='Forward']"],
+    ["css selector", "span[id$='-next']"]
+  ],
+  "CUSTOM_FIELDS_TABS": [
+    ["xpath", "//span[contains(@class,'lsTabStrip--item-text') and normalize-space(text())='Custom Fields']"],
+    ["xpath", "//span[normalize-space(text())='Custom Fields']"]
+  ],
+  "WEBGUI_FIELD_INPUTS": {
+    "customer_ref": [
+      ["css selector", "input[title='Customer Reference']"]
+    ],
+    "customer_name": [
+      ["xpath", "//label[contains(@lsdata,'txtKUAGV-TXTPA')]"],
+      ["xpath", "//input[@title='Sold-to Party']/following::label[@title][1]"]
+    ],
+    "scope_of_work": [
+      ["xpath", "//input[contains(@lsdata,'subSUBSCREEN_7') and contains(@lsdata,'LIST_FIELD_VALUE')]"],
+      ["css selector", "input[title='Code']"]
+    ],
+    "inv_subject": [
+      ["xpath", "//input[contains(@lsdata,'subSUBSCREEN_2') and contains(@lsdata,'NUMERICAL_TEXT_FIELD_VALUE')]"],
+      ["css selector", "input[title='Numerical Text']"]
+    ],
+    "product_type": [
+      ["xpath", "//input[contains(@lsdata,'subSUBSCREEN_20') and contains(@lsdata,'ASSOCIATION_FIELD_VALUE')]"],
+      ["css selector", "input[title='Association']"]
+    ],
+    "closing_date": [
+      ["xpath", "//input[contains(@lsdata,'subSUBSCREEN_4') and contains(@lsdata,'DATE_FIELD_VALUE')]"],
+      ["css selector", "input[title='Date']"]
+    ]
+  },
+  "WEBGUI_LABEL_FRAGMENTS": {
+    "customer_ref": ["ust. Reference", "Customer Reference", "Cust. Reference"]
+  },
+  "WEBGUI_LABEL_VALUE_FIELDS": ["customer_name"]
+}

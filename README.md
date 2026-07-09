@@ -40,11 +40,34 @@ python main.py sap test --visible --keep-open 10
 python main.py extract invitations --visible --from-date 2026-01-01 --to-date 2026-01-31
 ```
 
-7. Run other extraction jobs:
+7. Start the API server:
+
+```bash
+python main.py api serve
+```
+
+8. Run other extraction jobs:
 
 ```bash
 python main.py extract invitations
 python main.py extract cases
+```
+
+## API
+
+### `GET /api/invitations`
+
+| Query param | Description |
+|-------------|-------------|
+| `invitationId` | Optional SAP Sales Inquiry ID (e.g. `UAE1401324`) |
+| `offset` | Pagination offset when listing all (default `0`) |
+| `limit` | Page size when listing all (default `50`, max `200`) |
+
+Examples:
+
+```bash
+curl http://127.0.0.1:8000/api/invitations
+curl http://127.0.0.1:8000/api/invitations?invitationId=UAE1401324
 ```
 
 ## Database schema

@@ -5,3 +5,7 @@ python-dotenv>=1.0.1
 pydantic-settings>=2.6.1
 alembic>=1.14.0
 webdriver-manager>=4.0.2
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+httpx>=0.28.0
+pytest>=8.3.0

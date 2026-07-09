@@ -60,7 +60,7 @@ def build_parser() -> argparse.ArgumentParser:
     sap_test_parser.add_argument(
         "--visible",
         action="store_true",
-        help="Show the browser window (overrides HEADLESS=false behavior)",
+        help="Show the browser window (overrides HEADLESS=true behavior)",
     )
     sap_test_parser.add_argument(
         "--from-date",
@@ -78,6 +78,13 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Keep browser open for N seconds before closing",
     )
+
+    api_parser = subparsers.add_parser("api", help="Run the HTTP API server")
+    api_subparsers = api_parser.add_subparsers(dest="api_action", required=True)
+    api_serve_parser = api_subparsers.add_parser("serve", help="Start the API server")
+    api_serve_parser.add_argument("--host", default=None, help="Override API_HOST")
+    api_serve_parser.add_argument("--port", type=int, default=None, help="Override API_PORT")
+    api_serve_parser.add_argument("--reload", action="store_true", help="Enable auto-reload")
 
     return parser
 
@@ -148,6 +155,18 @@ def run_db_upgrade() -> int:
     return 0
 
 
+def run_api_serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    settings = get_settings()
+    host = args.host or settings.api_host
+    port = args.port or settings.api_port
+    logger = setup_logging(run_name="api")
+    logger.info("Starting API server at http://%s:%s", host, port)
+    uvicorn.run("app.main:app", host=host, port=port, reload=args.reload)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -160,6 +179,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_db_upgrade()
     if args.command == "sap" and args.sap_action == "test":
         return run_sap_test(args)
+    if args.command == "api" and args.api_action == "serve":
+        return run_api_serve(args)
 
     parser.print_help()
     return 1

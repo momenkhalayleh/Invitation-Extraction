@@ -37,6 +37,8 @@ class Settings(BaseSettings):
 
     log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
     log_dir: Path = Field(default=PROJECT_ROOT / "logs", validation_alias="LOG_DIR")
+    api_host: str = Field(default="127.0.0.1", validation_alias="API_HOST")
+    api_port: int = Field(default=8000, validation_alias="API_PORT")
 
 
 @lru_cache

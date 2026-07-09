@@ -4,7 +4,12 @@ import time
 from collections.abc import Iterator
 from datetime import date, datetime
 
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import (
+    InvalidSessionIdException,
+    StaleElementReferenceException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -41,9 +46,14 @@ class SapInvitationExtractor:
         self.client.click_go()
         self.client.wait_for_results_table()
 
-    def iter_invitations(self) -> Iterator[InvitationCreate]:
+    def iter_invitations(self, max_count: int | None = None) -> Iterator[InvitationCreate]:
         processed_refs: set[str] = set()
-        max_count = self.client.settings.sap_max_invitations
+        limit = (
+            self.client.settings.sap_max_invitations
+            if max_count is None
+            else max_count
+        )
+        unlimited = limit <= 0
         saved_count = 0
 
         if self.client.settings.sap_skip_first_inquiry:
@@ -54,7 +64,7 @@ class SapInvitationExtractor:
                     processed_refs.add(first_ref)
                     logger.info("Skipping first inquiry %s (locked / test mode)", first_ref)
 
-        while saved_count < max_count:
+        while unlimited or saved_count < limit:
             links = self._get_inquiry_links()
             unprocessed = [
                 (link, ref)
@@ -74,9 +84,18 @@ class SapInvitationExtractor:
                 self._open_inquiry(link)
                 if not self._click_change_view():
                     logger.warning("'Change Sales Inquiries' link not found for %s", ref_hint)
-                self.open_custom_fields_section()
+                if not self.open_custom_fields_section():
+                    raise SapClientError(
+                        "Change Sales Inquiries did not open the expected WebGUI page "
+                        "(Cust. Reference not found)"
+                    )
                 invitation = self.scrape_current_invitation(known_ref=ref_hint)
-            except (SapClientError, StaleElementReferenceException) as exc:
+            except (
+                SapClientError,
+                StaleElementReferenceException,
+                InvalidSessionIdException,
+                WebDriverException,
+            ) as exc:
                 logger.warning("Skipping inquiry %s due to error: %s", ref_hint, exc)
                 self._recover_to_list()
                 continue
@@ -87,7 +106,46 @@ class SapInvitationExtractor:
             saved_count += 1
             self._back_to_list()
 
-        logger.info("Extraction limit reached (%s invitation(s))", saved_count)
+        logger.info("Extraction finished (%s invitation(s))", saved_count)
+
+    def extract_by_ref(self, inv_ref: str) -> InvitationCreate:
+        """Find and scrape one invitation by Sales Inquiry ID from the current search results."""
+        target = inv_ref.strip().upper()
+
+        while True:
+            links = self._get_inquiry_links()
+            for link in links:
+                ref = self._link_ref(link)
+                if not ref or ref.upper() != target:
+                    continue
+
+                try:
+                    self._open_inquiry(link)
+                    if not self._click_change_view():
+                        logger.warning("'Change Sales Inquiries' link not found for %s", ref)
+                    if not self.open_custom_fields_section():
+                        raise SapClientError(
+                            "Change Sales Inquiries did not open the expected WebGUI page "
+                            "(Cust. Reference not found)"
+                        )
+                    invitation = self.scrape_current_invitation(known_ref=ref)
+                except (
+                    SapClientError,
+                    StaleElementReferenceException,
+                    InvalidSessionIdException,
+                    WebDriverException,
+                ) as exc:
+                    raise SapClientError(
+                        f"Failed to extract invitation {target}: {exc}"
+                    ) from exc
+
+                logger.info("Scraped invitation %s", invitation.inv_ref)
+                return invitation
+
+            if not self._go_next_page():
+                break
+
+        raise SapClientError(f"Invitation {target} not found in search results")
 
     def _get_inquiry_links(self) -> list[WebElement]:
         for by, value in selectors.SALES_INQUIRY_LINKS:

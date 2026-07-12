@@ -85,9 +85,15 @@
     ["css selector", ".sapUiTableTr"]
   ],
   "BACK_BUTTONS": [
-    ["css selector", "[aria-label='Back']"],
-    ["xpath", "//button[@title='Back']"],
-    ["xpath", "//bdi[normalize-space(text())='Back']/ancestor::button"]
+    ["css selector", "button.ui5-button-root[title='Back']"],
+    ["css selector", "button.ui5-button-root[aria-description='Back']"],
+    ["css selector", "button[title='Back']"],
+    ["css selector", "button[aria-description='Back']"],
+    ["css selector", "ui5-button[title='Back']"],
+    ["css selector", "[title='Back'][role='button']"],
+    ["xpath", "//button[@title='Back' or @aria-description='Back']"],
+    ["xpath", "//*[@name='sap-icon://nav-back']/ancestor::button[1]"],
+    ["xpath", "//*[@aria-label='Navigate Back']/ancestor::button[1]"]
   ],
   "NEXT_PAGE_BUTTONS": [
     ["css selector", "[title='Next Page']"],

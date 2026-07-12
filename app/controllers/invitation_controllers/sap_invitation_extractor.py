@@ -39,10 +39,10 @@ class SapInvitationExtractor:
     def timeout(self) -> int:
         return self.client.timeout
 
-    def prepare_search(self, date_from: str, date_to: str) -> None:
+    def prepare_search(self) -> None:
         self.client.ensure_launchpad()
         self.client.navigate_to_manage_sales_enquiries()
-        self.client.apply_date_filter(date_from, date_to)
+        self.client.apply_invitation_today_filter()
         self.client.click_go()
         self.client.wait_for_results_table()
 
@@ -355,16 +355,29 @@ class SapInvitationExtractor:
         return False
 
     def _recover_to_list(self) -> None:
-        # Leave any WebGUI iframe/window before returning to the Fiori list.
+        """Leave WebGUI / extra windows, then Back twice to the invitations table."""
+        self._leave_webgui_context()
+        self._back_to_list()
+
+    def _leave_webgui_context(self) -> None:
         try:
             self.driver.switch_to.default_content()
         except Exception:
             pass
         handles = self.driver.window_handles
         if len(handles) > 1:
-            self.driver.switch_to.window(handles[0])
-            time.sleep(1)
-        self._back_to_list()
+            main = handles[0]
+            for handle in handles[1:]:
+                try:
+                    self.driver.switch_to.window(handle)
+                    self.driver.close()
+                except Exception:
+                    logger.debug("Could not close extra window", exc_info=True)
+            self.driver.switch_to.window(main)
+            try:
+                self.driver.switch_to.default_content()
+            except Exception:
+                pass
 
     def _wait_for_object_page(self) -> None:
         wait = WebDriverWait(self.driver, self.timeout)
@@ -381,12 +394,35 @@ class SapInvitationExtractor:
             raise SapClientError("Object Page did not load after opening inquiry") from exc
 
     def _back_to_list(self) -> None:
-        for _ in range(4):
+        """
+        Return to the invitations results table.
+
+        After Change Sales Inquiries (WebGUI), SAP needs Back twice:
+        1) leave the change/WebGUI view
+        2) leave the inquiry object page → invitations table
+        """
+        self._leave_webgui_context()
+
+        for step in (1, 2):
             if self._get_inquiry_links():
+                logger.info("On invitations table (after %s Back click(s))", step - 1)
                 return
-            self.client.return_to_results_list()
-            time.sleep(1.5)
-        logger.warning("Could not confirm return to results list")
+            if not self.client.click_back_button():
+                logger.warning("Back button not found on step %s; trying browser back", step)
+                self.driver.back()
+            time.sleep(1.8)
+
+        for extra in range(2):
+            if self._get_inquiry_links():
+                logger.info("Returned to invitations table")
+                return
+            self.client.click_back_button()
+            time.sleep(1.8)
+
+        if self._get_inquiry_links():
+            logger.info("Returned to invitations table")
+            return
+        logger.warning("Could not confirm return to results list after double Back")
 
     def scrape_current_invitation(self, known_ref: str | None = None) -> InvitationCreate:
         payload: dict[str, str | date | None] = {}
@@ -442,22 +478,6 @@ class SapInvitationExtractor:
 
         return None
 
-    def _wait_for_detail_page(self) -> None:
-        wait = WebDriverWait(self.driver, self.timeout)
-        try:
-            wait.until(
-                EC.presence_of_element_located(
-                    (
-                        By.XPATH,
-                        "//*[contains(@class,'sapMObjectHeader') or contains(@class,'sapMObjectPage') "
-                        "or contains(@class,'sapMForm') or contains(., 'Sales Inquir')]",
-                    )
-                )
-            )
-            time.sleep(1)
-        except TimeoutException as exc:
-            raise SapClientError("Invitation detail page did not load") from exc
-
     def _go_next_page(self) -> bool:
         for by, value in selectors.NEXT_PAGE_BUTTONS:
             buttons = self.driver.find_elements(by, value)
@@ -471,48 +491,6 @@ class SapInvitationExtractor:
                 logger.info("Moved to next results page")
                 return True
         return False
-
-    def _read_field_by_labels(self, labels: tuple[str, ...]) -> str | None:
-        for label in labels:
-            value = self._read_label_value(label)
-            if value:
-                return value
-        return None
-
-    def _read_label_value(self, label: str) -> str | None:
-        xpaths = [
-            f"//*[normalize-space(text())='{label}']/following::*[self::span or self::div or self::textarea or self::input][1]",
-            f"//*[contains(normalize-space(.), '{label}')]/following::span[contains(@class,'sapMText')][1]",
-            f"//label[contains(normalize-space(.), '{label}')]/following::span[1]",
-            f"//span[contains(normalize-space(.), '{label}')]/ancestor::div[1]/following-sibling::div//span[1]",
-            f"//*[contains(@aria-label, '{label}')]",
-        ]
-        for xpath in xpaths:
-            elements = self.driver.find_elements(By.XPATH, xpath)
-            for element in elements:
-                if not element.is_displayed():
-                    continue
-                if element.tag_name == "input":
-                    value = element.get_attribute("value")
-                elif element.tag_name == "textarea":
-                    value = element.get_attribute("value") or element.text
-                else:
-                    value = element.text
-                value = self._normalize_text(value)
-                if value and value.lower() != label.lower():
-                    return value
-        return None
-
-    def _read_title_inv_ref(self) -> str | None:
-        title_elements = self.driver.find_elements(
-            By.CSS_SELECTOR,
-            ".sapMTitle, .sapMObjectHeaderTitle, [id*='ObjectPage'] h1, [id*='ObjectPage'] h2",
-        )
-        for element in title_elements:
-            text = self._normalize_text(element.text)
-            if text:
-                return text.split(" ")[0]
-        return None
 
     @staticmethod
     def _normalize_text(value: str | None) -> str | None:

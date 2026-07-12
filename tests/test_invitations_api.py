@@ -16,12 +16,9 @@ from fastapi.testclient import TestClient
 
 
 
-from app.controllers.invitation_controller import (
-
+from app.controllers.invitation_controllers import (
     InvitationExtractionError,
-
     InvitationNotFoundError,
-
 )
 
 from app.main import create_app
@@ -179,21 +176,13 @@ def test_extract_invitation_not_found(client: TestClient) -> None:
 
 
 def test_extract_invitation_sap_error(client: TestClient) -> None:
-
     with patch(
-
         "app.api.routes.invitations.extract_invitations_via_api",
-
-        side_effect=InvitationExtractionError("Date range is required. Set SCRAPE_DATE_FROM/SCRAPE_DATE_TO in .env."),
-
+        side_effect=InvitationExtractionError("Could not select Document Date option 'Today'"),
     ):
-
         response = client.get("/api/invitations")
 
-
-
     assert response.status_code == 400
-
-    assert response.json()["error"] == "Date range is required. Set SCRAPE_DATE_FROM/SCRAPE_DATE_TO in .env."
+    assert "Today" in response.json()["error"]
 
 

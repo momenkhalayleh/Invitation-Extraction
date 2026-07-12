@@ -197,6 +197,21 @@ class SapClient:
         self._wait_for_app_shell()
         logger.info("Manage Sales Enquiries screen opened")
 
+    def apply_invitation_today_filter(self) -> None:
+        """Set Document Date filter to SAP's Today option (no From/To range)."""
+        self._require_driver()
+        logger.info("Applying Document Date filter: Today")
+
+        self._click_if_present(selectors.DATE_PICKER_TOGGLES, "Document Date picker")
+        time.sleep(1)
+
+        if not self._click_text_option(("Today",)):
+            raise SapClientError("Could not select Document Date option 'Today'")
+
+        time.sleep(1)
+        self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
+        logger.info("Selected Document Date = Today")
+
     def apply_date_filter(self, date_from: str, date_to: str) -> None:
         self._require_driver()
         date_option = self.settings.sap_date_option
@@ -296,19 +311,157 @@ class SapClient:
         except TimeoutException as exc:
             raise SapClientError("Timed out waiting for enquiry results table") from exc
 
-    def return_to_results_list(self) -> None:
+    def click_back_button(self) -> bool:
+        """
+        Click the Fiori/UI5 Back button once (title/aria-description='Back', nav-back icon).
+
+        Searches the shell document and application iframes, including open shadow roots,
+        because after WebGUI scraping the driver is often on default_content while Back
+        lives inside the app iframe.
+        """
         self._require_driver()
+
+        try:
+            self.driver.switch_to.default_content()
+        except Exception:
+            pass
+
+        contexts: list[object | None] = [None]  # None = stay on current/default
+        try:
+            frames = self.driver.find_elements(By.TAG_NAME, "iframe")
+        except Exception:
+            frames = []
+        contexts.extend(frames)
+
+        for frame in contexts:
+            try:
+                self.driver.switch_to.default_content()
+                if frame is not None:
+                    self.driver.switch_to.frame(frame)
+            except Exception:
+                continue
+
+            if self._click_back_in_current_document():
+                try:
+                    self.driver.switch_to.default_content()
+                except Exception:
+                    pass
+                return True
+
+            # One level of nested iframe (common for WebGUI inside Fiori).
+            try:
+                nested_frames = self.driver.find_elements(By.TAG_NAME, "iframe")
+            except Exception:
+                nested_frames = []
+            for nested in nested_frames:
+                try:
+                    self.driver.switch_to.frame(nested)
+                except Exception:
+                    continue
+                if self._click_back_in_current_document():
+                    try:
+                        self.driver.switch_to.default_content()
+                    except Exception:
+                        pass
+                    return True
+                try:
+                    self.driver.switch_to.parent_frame()
+                except Exception:
+                    try:
+                        self.driver.switch_to.default_content()
+                        if frame is not None:
+                            self.driver.switch_to.frame(frame)
+                    except Exception:
+                        break
+
+        try:
+            self.driver.switch_to.default_content()
+        except Exception:
+            pass
+        return False
+
+    def _click_back_in_current_document(self) -> bool:
+        """Find and click a visible Back control in the current browsing context."""
+        # Prefer JS: pierces open shadow roots used by UI5 web components.
+        clicked = self.driver.execute_script(
+            """
+            function isBack(el) {
+              if (!el) return false;
+              const title = (el.getAttribute('title') || '').trim();
+              const desc = (el.getAttribute('aria-description') || '').trim();
+              const label = (el.getAttribute('aria-label') || '').trim();
+              if (title === 'Back' || desc === 'Back' || label === 'Back') return true;
+              if (el.querySelector) {
+                if (el.querySelector('[name="sap-icon://nav-back"]')) return true;
+                if (el.querySelector('[aria-label="Navigate Back"]')) return true;
+              }
+              return false;
+            }
+            function collect(root, out) {
+              if (!root) return;
+              const nodes = root.querySelectorAll(
+                "button, [role='button'], ui5-button, .ui5-button-root"
+              );
+              for (const n of nodes) {
+                if (isBack(n)) out.push(n);
+              }
+              const all = root.querySelectorAll('*');
+              for (const el of all) {
+                if (el.shadowRoot) collect(el.shadowRoot, out);
+              }
+            }
+            const found = [];
+            collect(document, found);
+            for (const el of found) {
+              try {
+                const style = window.getComputedStyle(el);
+                if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
+                el.scrollIntoView({block: 'center'});
+                el.click();
+                return true;
+              } catch (e) {}
+            }
+            return false;
+            """
+        )
+        if clicked:
+            logger.info("Clicked Back button (UI5)")
+            return True
+
         for by, value in selectors.BACK_BUTTONS:
-            buttons = self.driver.find_elements(by, value)
+            try:
+                buttons = self.driver.find_elements(by, value)
+            except Exception:
+                continue
             for button in buttons:
-                if button.is_displayed() and button.is_enabled():
-                    button.click()
-                    time.sleep(1.5)
-                    logger.debug("Returned to results list via Back")
-                    return
+                try:
+                    if not button.is_displayed() or not button.is_enabled():
+                        continue
+                except StaleElementReferenceException:
+                    continue
+                try:
+                    self.driver.execute_script(
+                        "arguments[0].scrollIntoView({block: 'center'});", button
+                    )
+                    self.driver.execute_script("arguments[0].click();", button)
+                except Exception:
+                    try:
+                        button.click()
+                    except Exception:
+                        continue
+                logger.info("Clicked Back button")
+                return True
+        return False
+
+    def return_to_results_list(self) -> None:
+        """Click Back once (caller may call twice to leave WebGUI then Object Page)."""
+        self._require_driver()
+        if self.click_back_button():
+            time.sleep(1.5)
+            return
         self.driver.back()
         time.sleep(1.5)
-        logger.debug("Returned to results list via browser back")
+        logger.debug("Returned via browser history back")
 
     @property
     def web_driver(self) -> WebDriver:

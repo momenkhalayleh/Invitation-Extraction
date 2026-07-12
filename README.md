@@ -28,16 +28,16 @@ CREATE DATABASE al_ghanem_extraction;
 python main.py db upgrade
 ```
 
-5. Test SAP Fiori login and navigation:
+5. Test SAP Fiori login and navigation (Document Date = Today):
 
 ```bash
 python main.py sap test --visible --keep-open 10
 ```
 
-6. Run invitation extraction:
+6. Run invitation extraction (Document Date = Today; fetches all unless limited in `.env`):
 
 ```bash
-python main.py extract invitations --visible --from-date 2026-01-01 --to-date 2026-01-31
+python main.py extract invitations --visible
 ```
 
 7. Start the API server:
@@ -96,11 +96,12 @@ Stores RFQ line items in `item_data` (JSONB) until the external items field list
 
 ## Project layout
 
+- `app/controllers/invitation_controllers/` — invitation extraction service, scraper, repository
+- `app/controllers/selenuim_client.py` — shared SAP Selenium client
 - `app/configs/` — settings, logging, SAP auth helpers
-- `app/clients/` — database client, repositories
+- `app/clients/` — database client, SAP selectors
 - `app/models/` — SQLAlchemy ORM models
 - `app/schemas/` — Pydantic validation schemas
-- `app/controllers/` — extraction business logic (Step 4+)
 - `alembic/` — database migrations
 
 ## Status

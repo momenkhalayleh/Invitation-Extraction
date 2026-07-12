@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.controllers.invitation_controller import (
+from app.controllers.invitation_controllers import (
     InvitationExtractionError,
     InvitationNotFoundError,
     extract_invitations_via_api,
@@ -37,10 +37,10 @@ def extract_invitations(
     ),
 ) -> InvitationSingleResponse | InvitationListResponse:
     """
-    Extract invitation data from SAP.
+    Extract invitation data from SAP (Document Date = Today).
 
     - If invitationId is provided: log in to SAP, find that invitation, scrape and return it.
-    - If invitationId is omitted: extract all invitations using the script's configured range.
+    - If invitationId is omitted: extract invitations up to SAP_MAX_INVITATIONS.
     """
     invitation_id: str | None = None
     if invitationId is not None:
@@ -54,9 +54,9 @@ def extract_invitations(
 
     try:
         # Match CLI `--visible`: always show the browser when extraction is triggered via API.
+        # Omit max_count so SAP_MAX_INVITATIONS (default 2) applies.
         result = extract_invitations_via_api(
             invitation_id=invitation_id,
-            max_count=0,
             headless=False,
         )
     except InvitationNotFoundError as exc:

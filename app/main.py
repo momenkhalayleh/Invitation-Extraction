@@ -9,8 +9,11 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Al Ghanem Extraction API",
-        description="Extract invitation data from SAP Sales Inquiries",
-        version="0.1.0",
+        description=(
+            "SAP invitation extraction. "
+            "GET /api/invitations/today | /yesterday | /all"
+        ),
+        version="0.2.0",
     )
     app.include_router(invitations_router, prefix="/api")
 

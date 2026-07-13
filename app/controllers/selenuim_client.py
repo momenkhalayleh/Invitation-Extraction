@@ -239,53 +239,6 @@ class SapClient:
         self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
         logger.info("Selected Document Date = Yesterday")
 
-    def apply_date_filter(self, date_from: str, date_to: str) -> None:
-        self._require_driver()
-        date_option = self.settings.sap_date_option
-        logger.info("Applying date filter: option=%s (%s to %s)", date_option, date_from, date_to)
-
-        # Open the Document Date picker (calendar button on the filter bar).
-        self._click_if_present(selectors.DATE_PICKER_TOGGLES, "Document Date picker")
-        time.sleep(1)
-
-        # The picker shows a dropdown of options (Date / Today / Yesterday / From / To ...).
-        if not self._click_text_option(self._date_option_labels(date_option)):
-            logger.warning("Could not select date option '%s' in picker", date_option)
-            return
-
-        time.sleep(1)
-
-        # Single-day options (Today, Yesterday, Tomorrow) need no further input.
-        if date_option.strip().lower() in {"today", "yesterday", "tomorrow"}:
-            self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
-            logger.info("Selected single-day option '%s'", date_option)
-            return
-
-        from_field = self._find_visible(selectors.DATE_FROM_FIELDS, "date-from field", required=False)
-        if from_field is None:
-            logger.warning("Date-from field not found after selecting '%s'", date_option)
-        else:
-            self._set_input_value(from_field, date_from)
-
-        to_field = self._find_visible(selectors.DATE_TO_FIELDS, "date-to field", required=False)
-        if to_field is None:
-            logger.warning("Date-to field not found after selecting '%s'", date_option)
-        else:
-            self._set_input_value(to_field, date_to)
-
-        # Confirm the picker quickly so Go can run with minimal delay.
-        self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
-        time.sleep(0.3)
-
-    @staticmethod
-    def _date_option_labels(option: str) -> tuple[str, ...]:
-        cleaned = option.strip()
-        variants = {cleaned}
-        # Normalize spacing around slashes, e.g. "From / To" <-> "From/To"
-        variants.add(cleaned.replace(" / ", "/"))
-        variants.add(cleaned.replace("/", " / "))
-        return tuple(variants)
-
     def _click_text_option(self, labels: tuple[str, ...]) -> bool:
         self._require_driver()
         for label in labels:
@@ -480,16 +433,6 @@ class SapClient:
                 return True
         return False
 
-    def return_to_results_list(self) -> None:
-        """Click Back once (caller may call twice to leave WebGUI then Object Page)."""
-        self._require_driver()
-        if self.click_back_button():
-            time.sleep(1.5)
-            return
-        self.driver.back()
-        time.sleep(1.5)
-        logger.debug("Returned via browser history back")
-
     @property
     def web_driver(self) -> WebDriver:
         self._require_driver()
@@ -650,54 +593,3 @@ class SapClient:
     def _require_driver(self) -> None:
         if self.driver is None:
             raise SapClientError("WebDriver is not started. Call start() or use SapClient as a context manager.")
-
-    def wait_until_not_busy(self, timeout: int | None = None) -> None:
-        """Wait for document ready and SAP busy indicators to clear."""
-        self._require_driver()
-        wait = WebDriverWait(self.driver, timeout or self.timeout)
-        try:
-            wait.until(self._is_document_ready)
-            wait.until(self._is_sap_not_busy)
-        except TimeoutException:
-            logger.debug("Page still busy after %ss; continuing", timeout or self.timeout)
-        self._settle()
-
-    def wait_for_locators(
-        self,
-        locator_options: Iterable[tuple[str, str]],
-        label: str,
-        *,
-        clickable: bool = False,
-        timeout: int | None = None,
-        required: bool = True,
-    ) -> WebElement | None:
-        """Wait for the first matching locator to appear (or become clickable)."""
-        if clickable:
-            return self._find_clickable(locator_options, label, timeout=timeout, required=required)
-        return self._find_visible(locator_options, label, timeout=timeout, required=required)
-
-    def _settle(self) -> None:
-        delay = self.settings.sap_settle_ms / 1000
-        if delay > 0:
-            time.sleep(delay)
-
-    @staticmethod
-    def _is_document_ready(driver: WebDriver) -> bool:
-        try:
-            return driver.execute_script("return document.readyState") == "complete"
-        except Exception:
-            return True
-
-    @staticmethod
-    def _is_sap_not_busy(driver: WebDriver) -> bool:
-        busy_selectors = (
-            ".sapUiBusy",
-            ".sapUiLocalBusyIndicator",
-            ".sapUiBlockLayer",
-            "[aria-busy='true']",
-        )
-        for selector in busy_selectors:
-            for element in driver.find_elements(By.CSS_SELECTOR, selector):
-                if element.is_displayed():
-                    return False
-        return True

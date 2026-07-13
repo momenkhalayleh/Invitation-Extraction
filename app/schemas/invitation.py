@@ -1,7 +1,7 @@
 import re
 from datetime import date, datetime, timezone
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 # SAP Sales Inquiry ID format (e.g. UAE1401324, QA15001104).
 INVITATION_ID_PATTERN = re.compile(r"^[A-Z]{2,4}\d{6,10}$")
@@ -21,13 +21,6 @@ class InvitationCreate(InvitationBase):
     pass
 
 
-class InvitationRead(InvitationBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    extracted_at: datetime
-    updated_at: datetime
-
-
 class InvitationApiItem(BaseModel):
     """Invitation as returned by the HTTP API (invitationId maps from inv_ref)."""
 
@@ -40,20 +33,6 @@ class InvitationApiItem(BaseModel):
     closing_date: date | None = None
     extracted_at: datetime
     updated_at: datetime
-
-    @classmethod
-    def from_model(cls, invitation: InvitationRead | object) -> "InvitationApiItem":
-        return cls(
-            invitationId=invitation.inv_ref,
-            customer_ref=invitation.customer_ref,
-            customer_name=invitation.customer_name,
-            scope_of_work=invitation.scope_of_work,
-            inv_subject=invitation.inv_subject,
-            product_type=invitation.product_type,
-            closing_date=invitation.closing_date,
-            extracted_at=invitation.extracted_at,
-            updated_at=invitation.updated_at,
-        )
 
     @classmethod
     def from_create(cls, invitation: InvitationCreate) -> "InvitationApiItem":
@@ -76,6 +55,14 @@ class InvitationSingleResponse(BaseModel):
 
 
 class InvitationListResponse(BaseModel):
+    data: list[InvitationApiItem]
+    count: int
+
+
+class InvitationExtractResponse(BaseModel):
+    """List response for mode-based extraction endpoints."""
+
+    mode: str
     data: list[InvitationApiItem]
     count: int
 

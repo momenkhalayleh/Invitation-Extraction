@@ -62,19 +62,21 @@ python main.py extract cases
 
 ## API
 
-### `GET /api/invitations`
+| Endpoint | Mode |
+|----------|------|
+| `GET /api/invitations/today` | Document Date = Today |
+| `GET /api/invitations/yesterday` | Document Date = Yesterday |
+| `GET /api/invitations/all` | No date filter (Go only) |
 
-| Query param | Description |
-|-------------|-------------|
-| `invitationId` | Optional SAP Sales Inquiry ID (e.g. `UAE1401324`) |
-| `offset` | Pagination offset when listing all (default `0`) |
-| `limit` | Page size when listing all (default `50`, max `200`) |
-
-Examples:
+Optional query param on each: `invitationId` (e.g. `UAE1401324`).
 
 ```bash
-curl http://127.0.0.1:8000/api/invitations
-curl http://127.0.0.1:8000/api/invitations?invitationId=UAE1401324
+python main.py api serve
+
+curl http://127.0.0.1:8000/api/invitations/today
+curl http://127.0.0.1:8000/api/invitations/yesterday
+curl http://127.0.0.1:8000/api/invitations/all
+curl "http://127.0.0.1:8000/api/invitations/today?invitationId=UAE1401324"
 ```
 
 ## Database schema

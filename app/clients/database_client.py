@@ -7,7 +7,6 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.configs.settings import get_settings
-from app.models import Base
 
 
 class DatabaseClient:
@@ -21,9 +20,6 @@ class DatabaseClient:
             expire_on_commit=False,
         )
 
-    def create_tables(self) -> None:
-        Base.metadata.create_all(self.engine)
-
     @contextmanager
     def session(self) -> Iterator[Session]:
         db_session = self._session_factory()
@@ -35,9 +31,6 @@ class DatabaseClient:
             raise
         finally:
             db_session.close()
-
-    def get_session(self) -> Session:
-        return self._session_factory()
 
 
 @lru_cache

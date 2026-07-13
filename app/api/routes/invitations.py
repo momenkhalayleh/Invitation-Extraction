@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -11,7 +12,7 @@ from app.schemas.invitation import (
     ErrorResponse,
     InvitationApiItem,
     InvitationCreate,
-    InvitationListResponse,
+    InvitationExtractResponse,
     InvitationSingleResponse,
     is_valid_invitation_id,
     sanitize_invitation_id,
@@ -20,43 +21,36 @@ from app.schemas.invitation import (
 logger = logging.getLogger("al_ghanem.extraction.api")
 router = APIRouter(prefix="/invitations", tags=["invitations"])
 
+InvitationMode = Literal["today", "yesterday", "all"]
 
-@router.get(
-    "",
-    response_model=InvitationSingleResponse | InvitationListResponse,
-    responses={
-        400: {"model": ErrorResponse},
-        404: {"model": ErrorResponse},
-        500: {"model": ErrorResponse},
-    },
-)
-def extract_invitations(
-    invitationId: str | None = Query(
-        default=None,
-        description="SAP Sales Inquiry ID to extract (e.g. UAE1401324). Omit to extract all.",
-    ),
-) -> InvitationSingleResponse | InvitationListResponse:
-    """
-    Extract invitation data from SAP (Document Date = Today).
+_ERROR_RESPONSES = {
+    400: {"model": ErrorResponse},
+    404: {"model": ErrorResponse},
+    500: {"model": ErrorResponse},
+}
 
-    - If invitationId is provided: log in to SAP, find that invitation, scrape and return it.
-    - If invitationId is omitted: extract invitations up to SAP_MAX_INVITATIONS.
-    """
-    invitation_id: str | None = None
-    if invitationId is not None:
-        try:
-            invitation_id = sanitize_invitation_id(invitationId)
-        except ValueError as exc:
-            raise HTTPException(status_code=400, detail="Invalid invitationId format") from exc
 
-        if not is_valid_invitation_id(invitation_id):
-            raise HTTPException(status_code=400, detail="Invalid invitationId format")
-
+def _parse_invitation_id(invitation_id: str | None) -> str | None:
+    if invitation_id is None:
+        return None
     try:
-        # Match CLI `--visible`: always show the browser when extraction is triggered via API.
-        # Omit max_count so SAP_MAX_INVITATIONS (default 2) applies.
+        cleaned = sanitize_invitation_id(invitation_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid invitationId format") from exc
+    if not is_valid_invitation_id(cleaned):
+        raise HTTPException(status_code=400, detail="Invalid invitationId format")
+    return cleaned
+
+
+def _run_extraction(
+    mode: InvitationMode,
+    invitation_id: str | None,
+) -> InvitationSingleResponse | InvitationExtractResponse:
+    try:
+        # Match CLI `--visible`: show the browser when extraction is triggered via API.
         result = extract_invitations_via_api(
             invitation_id=invitation_id,
+            mode=mode,
             headless=False,
         )
     except InvitationNotFoundError as exc:
@@ -64,13 +58,56 @@ def extract_invitations(
     except InvitationExtractionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception:
-        logger.exception("Unexpected error while extracting invitations")
+        logger.exception("Unexpected error while extracting invitations (mode=%s)", mode)
         raise HTTPException(status_code=500, detail="Internal server error") from None
 
     if isinstance(result, InvitationCreate):
         return InvitationSingleResponse(data=InvitationApiItem.from_create(result))
 
     items = [InvitationApiItem.from_create(invitation) for invitation in result]
-    return InvitationListResponse(data=items, count=len(items))
+    return InvitationExtractResponse(mode=mode, data=items, count=len(items))
 
 
+@router.get(
+    "/today",
+    response_model=InvitationSingleResponse | InvitationExtractResponse,
+    responses=_ERROR_RESPONSES,
+)
+def extract_invitations_today(
+    invitationId: str | None = Query(
+        default=None,
+        description="Optional SAP Sales Inquiry ID within Today's results.",
+    ),
+) -> InvitationSingleResponse | InvitationExtractResponse:
+    """Extract invitations with Document Date = Today."""
+    return _run_extraction("today", _parse_invitation_id(invitationId))
+
+
+@router.get(
+    "/yesterday",
+    response_model=InvitationSingleResponse | InvitationExtractResponse,
+    responses=_ERROR_RESPONSES,
+)
+def extract_invitations_yesterday(
+    invitationId: str | None = Query(
+        default=None,
+        description="Optional SAP Sales Inquiry ID within Yesterday's results.",
+    ),
+) -> InvitationSingleResponse | InvitationExtractResponse:
+    """Extract invitations with Document Date = Yesterday."""
+    return _run_extraction("yesterday", _parse_invitation_id(invitationId))
+
+
+@router.get(
+    "/all",
+    response_model=InvitationSingleResponse | InvitationExtractResponse,
+    responses=_ERROR_RESPONSES,
+)
+def extract_invitations_all(
+    invitationId: str | None = Query(
+        default=None,
+        description="Optional SAP Sales Inquiry ID within unfiltered (Go only) results.",
+    ),
+) -> InvitationSingleResponse | InvitationExtractResponse:
+    """Extract invitations with no Document Date filter (Go only)."""
+    return _run_extraction("all", _parse_invitation_id(invitationId))

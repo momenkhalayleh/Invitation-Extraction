@@ -1,3 +1,3 @@
-from app.schemas.invitation import InvitationBase, InvitationCreate, InvitationRead
+from app.schemas.invitation import InvitationBase, InvitationCreate
 
-__all__ = ["InvitationBase", "InvitationCreate", "InvitationRead"]
+__all__ = ["InvitationBase", "InvitationCreate"]

@@ -39,10 +39,23 @@ class SapInvitationExtractor:
     def timeout(self) -> int:
         return self.client.timeout
 
-    def prepare_search(self) -> None:
+    def prepare_search(self, mode: str = "today") -> None:
         self.client.ensure_launchpad()
         self.client.navigate_to_manage_sales_enquiries()
-        self.client.apply_invitation_today_filter()
+
+        normalized = (mode or "today").strip().lower()
+        if normalized == "today":
+            # Existing Today path — unchanged.
+            self.client.apply_invitation_today_filter()
+        elif normalized == "yesterday":
+            self.client.apply_invitation_yesterday_filter()
+        elif normalized == "all":
+            logger.info("Mode=all: skipping Document Date filter; Go only")
+        else:
+            raise SapClientError(
+                f"Unsupported invitation extraction mode '{mode}'. Use today, yesterday, or all."
+            )
+
         self.client.click_go()
         self.client.wait_for_results_table()
 

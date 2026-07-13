@@ -34,10 +34,17 @@ python main.py db upgrade
 python main.py sap test --visible --keep-open 10
 ```
 
-6. Run invitation extraction (Document Date = Today; fetches all unless limited in `.env`):
+6. Run invitation extraction:
 
 ```bash
-python main.py extract invitations --visible
+# Document Date = Today (default)
+python main.py extract invitations --visible --mode today
+
+# Document Date = Yesterday
+python main.py extract invitations --visible --mode yesterday
+
+# No date filter — Go only
+python main.py extract invitations --visible --mode all
 ```
 
 7. Start the API server:

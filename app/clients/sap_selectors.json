@@ -51,6 +51,13 @@
     ["xpath", "//bdi[normalize-space(text())='OK']/ancestor::button"],
     ["css selector", "button[id*='-OK']"]
   ],
+  "DATE_OPTION_YESTERDAY": [
+    ["css selector", "li[id*='SalesInquiryDate-option-YESTERDAY']"],
+    ["css selector", "span[id*='SalesInquiryDate-option-YESTERDAY-titleText']"],
+    ["xpath", "//li[@role='option' and contains(@id,'option-YESTERDAY')]"],
+    ["xpath", "//span[contains(@id,'option-YESTERDAY-titleText') and normalize-space(text())='Yesterday']"],
+    ["xpath", "//li[@role='option'][.//span[normalize-space(text())='Yesterday']]"]
+  ],
   "DATE_FROM_FIELDS": [
     ["css selector", "input[placeholder*='From']"],
     ["xpath", "//div[contains(@class,'sapMDDR')]//input[1]"],

@@ -212,6 +212,33 @@ class SapClient:
         self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
         logger.info("Selected Document Date = Today")
 
+    def apply_invitation_yesterday_filter(self) -> None:
+        """Set Document Date filter to SAP's Yesterday option (same picker/OK flow as Today)."""
+        self._require_driver()
+        logger.info("Applying Document Date filter: Yesterday")
+
+        self._click_if_present(selectors.DATE_PICKER_TOGGLES, "Document Date picker")
+        time.sleep(1)
+
+        option = self._find_clickable(
+            selectors.DATE_OPTION_YESTERDAY,
+            "Yesterday option",
+            timeout=10,
+            required=False,
+        )
+        if option is not None:
+            try:
+                option.click()
+            except Exception:
+                self.driver.execute_script("arguments[0].click();", option)
+            logger.info("Clicked Yesterday option")
+        elif not self._click_text_option(("Yesterday",)):
+            raise SapClientError("Could not select Document Date option 'Yesterday'")
+
+        time.sleep(1)
+        self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
+        logger.info("Selected Document Date = Yesterday")
+
     def apply_date_filter(self, date_from: str, date_to: str) -> None:
         self._require_driver()
         date_option = self.settings.sap_date_option

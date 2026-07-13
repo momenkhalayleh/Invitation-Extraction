@@ -24,7 +24,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     invitations_parser = extract_subparsers.add_parser(
         "invitations",
-        help="Extract Sales Enquiry invitations (Document Date = Today)",
+        help="Extract Sales Enquiry invitations (--mode today|yesterday|all)",
+    )
+    invitations_parser.add_argument(
+        "--mode",
+        choices=["today", "yesterday", "all"],
+        default="today",
+        help="today: Document Date=Today; yesterday: Document Date=Yesterday; all: Go only (no date filter)",
     )
     invitations_parser.add_argument(
         "--visible",
@@ -73,10 +79,16 @@ def run_extract_invitations(args: argparse.Namespace) -> int:
     logger = setup_logging(run_name="invitations")
     settings = get_settings()
     headless = False if args.visible else settings.headless
+    mode = args.mode
 
     try:
-        logger.info("Fetching invitations for Document Date = Today (limit=%s)", settings.sap_max_invitations)
+        logger.info(
+            "Fetching invitations mode=%s (limit=%s)",
+            mode,
+            settings.sap_max_invitations if settings.sap_max_invitations > 0 else "unlimited",
+        )
         saved = extract_invitations(
+            mode=mode,
             headless=headless,
             settings=settings,
         )

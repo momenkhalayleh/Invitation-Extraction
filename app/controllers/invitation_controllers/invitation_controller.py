@@ -13,6 +13,8 @@ from app.schemas.invitation import InvitationCreate
 
 logger = logging.getLogger("al_ghanem.extraction.invitations")
 
+INVITATION_MODES = frozenset({"today", "yesterday", "all"})
+
 
 class InvitationExtractionError(Exception):
     """Raised when invitation extraction cannot run."""
@@ -22,15 +24,26 @@ class InvitationNotFoundError(InvitationExtractionError):
     """Raised when the requested invitation ID is not in SAP search results."""
 
 
+def _normalize_mode(mode: str | None) -> str:
+    normalized = (mode or "today").strip().lower()
+    if normalized not in INVITATION_MODES:
+        raise InvitationExtractionError(
+            f"Unsupported mode '{mode}'. Use --mode today|yesterday|all."
+        )
+    return normalized
+
+
 def extract_invitations(
     *,
+    mode: str = "today",
     headless: bool | None = None,
     settings: Settings | None = None,
     max_count: int | None = None,
 ) -> int:
-    """CLI extraction: scrape SAP (Document Date = Today) and upsert invitations."""
+    """CLI extraction: scrape SAP for the selected mode and upsert invitations."""
     invitations = extract_invitations_via_api(
         invitation_id=None,
+        mode=mode,
         headless=headless,
         settings=settings,
         max_count=max_count,
@@ -41,25 +54,31 @@ def extract_invitations(
 def extract_invitations_via_api(
     invitation_id: str | None = None,
     *,
+    mode: str = "today",
     headless: bool | None = None,
     settings: Settings | None = None,
     max_count: int | None = None,
 ) -> InvitationCreate | list[InvitationCreate]:
     """
-    Run SAP extraction for the API.
+    Run SAP extraction for the API / CLI.
 
-    Document Date is always set to Today in SAP.
+    Modes:
+    - today: Document Date = Today (existing behavior)
+    - yesterday: Document Date = Yesterday
+    - all: no date filter; click Go only
 
     - With invitation_id: scrape that single invitation from SAP.
     - Without invitation_id: scrape invitations up to max_count
       (None → SAP_MAX_INVITATIONS; 0 → unlimited).
     """
     config = settings or get_settings()
+    selected_mode = _normalize_mode(mode)
     limit = config.sap_max_invitations if max_count is None else max_count
     db_client = get_database_client()
 
     logger.info(
-        "Invitation extraction for Document Date=Today (limit=%s)",
+        "Invitation extraction mode=%s (limit=%s)",
+        selected_mode,
         limit if limit > 0 else "unlimited",
     )
 
@@ -67,7 +86,7 @@ def extract_invitations_via_api(
         with SapClient(headless=headless, settings=config) as sap_client:
             sap_client.login()
             extractor = SapInvitationExtractor(sap_client)
-            extractor.prepare_search()
+            extractor.prepare_search(mode=selected_mode)
 
             if invitation_id:
                 invitation = extractor.extract_by_ref(invitation_id)

@@ -1,4 +1,4 @@
 from app.models.base import Base
-from app.models.invitation import Case, Invitation, RfqItem
+from app.models.invitation import Invitation
 
-__all__ = ["Base", "Case", "Invitation", "RfqItem"]
+__all__ = ["Base", "Invitation"]

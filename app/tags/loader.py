@@ -4,7 +4,7 @@ from pathlib import Path
 
 from selenium.webdriver.common.by import By
 
-_SELECTORS_FILE = Path(__file__).with_name("sap_selectors.json")
+_SELECTORS_FILE = Path(__file__).resolve().parent.parent / "tags" / "sap_selectors.json"
 _BY_MAP = {
     "id": By.ID,
     "name": By.NAME,

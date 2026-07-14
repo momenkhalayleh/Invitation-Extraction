@@ -17,9 +17,10 @@ from app.schemas.invitation import InvitationCreate
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
-    app = create_app()
-    with TestClient(app, raise_server_exceptions=False) as test_client:
-        yield test_client
+    with patch("app.main.upgrade_database"):
+        app = create_app()
+        with TestClient(app, raise_server_exceptions=False) as test_client:
+            yield test_client
 
 
 def _sample_invitation(inv_ref: str = "UAE1401324") -> InvitationCreate:
@@ -35,7 +36,7 @@ def _sample_invitation(inv_ref: str = "UAE1401324") -> InvitationCreate:
 @pytest.mark.parametrize("mode", ["today", "yesterday", "all"])
 def test_mode_endpoints_empty(client: TestClient, mode: str) -> None:
     with patch(
-        "app.api.routes.invitations.extract_invitations_via_api",
+        "app.controllers.invitation_controllers.invitation_controller.extract_invitations_via_api",
         return_value=[],
     ) as mocked:
         response = client.get(f"/api/invitations/{mode}")
@@ -46,12 +47,13 @@ def test_mode_endpoints_empty(client: TestClient, mode: str) -> None:
     assert body["data"] == []
     assert body["count"] == 0
     assert mocked.call_args.kwargs["mode"] == mode
+    assert mocked.call_args.kwargs["headless"] is False
 
 
 @pytest.mark.parametrize("mode", ["today", "yesterday", "all"])
 def test_mode_endpoints_with_data(client: TestClient, mode: str) -> None:
     with patch(
-        "app.api.routes.invitations.extract_invitations_via_api",
+        "app.controllers.invitation_controllers.invitation_controller.extract_invitations_via_api",
         return_value=[_sample_invitation()],
     ) as mocked:
         response = client.get(f"/api/invitations/{mode}")
@@ -62,12 +64,11 @@ def test_mode_endpoints_with_data(client: TestClient, mode: str) -> None:
     assert body["count"] == 1
     assert body["data"][0]["invitationId"] == "UAE1401324"
     assert mocked.call_args.kwargs["mode"] == mode
-    assert mocked.call_args.kwargs["headless"] is False
 
 
 def test_today_by_valid_id(client: TestClient) -> None:
     with patch(
-        "app.api.routes.invitations.extract_invitations_via_api",
+        "app.controllers.invitation_controllers.invitation_controller.extract_invitations_via_api",
         return_value=_sample_invitation(),
     ) as mocked:
         response = client.get(
@@ -94,7 +95,7 @@ def test_invalid_invitation_id(client: TestClient) -> None:
 
 def test_invitation_not_found(client: TestClient) -> None:
     with patch(
-        "app.api.routes.invitations.extract_invitations_via_api",
+        "app.controllers.invitation_controllers.invitation_controller.extract_invitations_via_api",
         side_effect=InvitationNotFoundError(
             "Invitation UAE9999999 not found in search results"
         ),
@@ -110,7 +111,7 @@ def test_invitation_not_found(client: TestClient) -> None:
 
 def test_sap_error(client: TestClient) -> None:
     with patch(
-        "app.api.routes.invitations.extract_invitations_via_api",
+        "app.controllers.invitation_controllers.invitation_controller.extract_invitations_via_api",
         side_effect=InvitationExtractionError(
             "Could not select Document Date option 'Yesterday'"
         ),

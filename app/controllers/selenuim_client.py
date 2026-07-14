@@ -15,7 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from app.clients import sap_selectors_config as selectors
+from app.tags import loader as selectors
 from app.configs.auth import SapCredentials, get_sap_credentials
 from app.configs.settings import Settings, get_settings
 
@@ -28,8 +28,6 @@ class SapClientError(Exception):
 
 class SapClient:
     """Selenium client for SAP S/4HANA Cloud Fiori (web)."""
-
-    MANAGE_SALES_ENQUIRIES_LABEL = "Manage Sales Enquiries"
 
     def __init__(
         self,
@@ -140,156 +138,6 @@ class SapClient:
         logger.info("Navigating to Fiori launchpad")
         self.driver.get(self.settings.sap_launchpad_url)
         self._wait_for_app_shell()
-
-    def navigate_to_manage_sales_enquiries(self) -> None:
-        self._require_driver()
-        self.ensure_launchpad()
-
-        if self.settings.sap_manage_sales_enquiries_url:
-            logger.info("Opening Manage Sales Enquiries via direct URL")
-            self.driver.get(self.settings.sap_manage_sales_enquiries_url)
-            self._wait_for_app_shell()
-            return
-
-        # Preferred: click the app tile in the launchpad favorites section.
-        tile = self._find_clickable(
-            selectors.MANAGE_INQUIRIES_TILES,
-            "Manage Sales Inquiries tile",
-            timeout=15,
-            required=False,
-        )
-        if tile is not None:
-            logger.info("Opening Manage Sales Inquiries via favorites tile")
-            tile.click()
-            self._wait_for_app_shell()
-            logger.info("Manage Sales Inquiries screen opened")
-            return
-
-        logger.info("Tile not found; searching Fiori launchpad for '%s'", self.MANAGE_SALES_ENQUIRIES_LABEL)
-
-        # In Fiori the search box is hidden behind a magnifier toggle; click it first.
-        self._click_if_present(selectors.FIORI_SEARCH_TOGGLES, "Fiori search toggle")
-        time.sleep(1)
-
-        search_field = self._find_clickable(
-            selectors.FIORI_SEARCH_FIELDS,
-            "Fiori search field",
-            required=False,
-        )
-        if search_field is None:
-            raise SapClientError(
-                "Could not find the Fiori search field. Set SAP_MANAGE_SALES_ENQUIRIES_URL in .env "
-                "to open the app directly (recommended)."
-            )
-
-        search_field.clear()
-        search_field.send_keys(self.MANAGE_SALES_ENQUIRIES_LABEL)
-        time.sleep(1)
-        search_field.send_keys(Keys.ENTER)
-        time.sleep(2)
-
-        tile = self._find_clickable(
-            selectors.SALES_ENQUIRY_TARGETS,
-            "Manage Sales Enquiries tile",
-            timeout=20,
-        )
-        tile.click()
-        self._wait_for_app_shell()
-        logger.info("Manage Sales Enquiries screen opened")
-
-    def apply_invitation_today_filter(self) -> None:
-        """Set Document Date filter to SAP's Today option (no From/To range)."""
-        self._require_driver()
-        logger.info("Applying Document Date filter: Today")
-
-        self._click_if_present(selectors.DATE_PICKER_TOGGLES, "Document Date picker")
-        time.sleep(1)
-
-        if not self._click_text_option(("Today",)):
-            raise SapClientError("Could not select Document Date option 'Today'")
-
-        time.sleep(1)
-        self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
-        logger.info("Selected Document Date = Today")
-
-    def apply_invitation_yesterday_filter(self) -> None:
-        """Set Document Date filter to SAP's Yesterday option (same picker/OK flow as Today)."""
-        self._require_driver()
-        logger.info("Applying Document Date filter: Yesterday")
-
-        self._click_if_present(selectors.DATE_PICKER_TOGGLES, "Document Date picker")
-        time.sleep(1)
-
-        option = self._find_clickable(
-            selectors.DATE_OPTION_YESTERDAY,
-            "Yesterday option",
-            timeout=10,
-            required=False,
-        )
-        if option is not None:
-            try:
-                option.click()
-            except Exception:
-                self.driver.execute_script("arguments[0].click();", option)
-            logger.info("Clicked Yesterday option")
-        elif not self._click_text_option(("Yesterday",)):
-            raise SapClientError("Could not select Document Date option 'Yesterday'")
-
-        time.sleep(1)
-        self._click_if_present(selectors.DATE_OK_BUTTONS, "date OK")
-        logger.info("Selected Document Date = Yesterday")
-
-    def _click_text_option(self, labels: tuple[str, ...]) -> bool:
-        self._require_driver()
-        for label in labels:
-            xpaths = (
-                # Matches the SAP list item span, e.g. id="...-option-TODAY-titleText"
-                f"//span[contains(@id,'-option-') and normalize-space(text())='{label}']",
-                f"//div[contains(@class,'sapMSLITitleOnly')]/span[normalize-space(text())='{label}']",
-                f"//span[normalize-space(text())='{label}']/ancestor::li[1]",
-                f"//li[@role='option'][.//span[normalize-space(text())='{label}']]",
-                f"//*[@role='option'][normalize-space(.)='{label}']",
-                f"//li[normalize-space(.)='{label}']",
-            )
-            for xpath in xpaths:
-                elements = self.driver.find_elements(By.XPATH, xpath)
-                for element in elements:
-                    if not element.is_displayed():
-                        continue
-                    self.driver.execute_script(
-                        "arguments[0].scrollIntoView({block: 'center'});", element
-                    )
-                    time.sleep(0.3)
-                    try:
-                        element.click()
-                    except Exception:
-                        self.driver.execute_script("arguments[0].click();", element)
-                    logger.info("Clicked date option '%s'", label)
-                    return True
-        return False
-
-    def click_go(self) -> None:
-        self._require_driver()
-        go_button = self._find_clickable(selectors.GO_BUTTONS, "Go button", required=False)
-        if go_button is None:
-            logger.warning("Go button not found; selectors may need updating in Step 4")
-            return
-        go_button.click()
-        time.sleep(0.5)
-        logger.info("Clicked Go to load enquiry results")
-
-    def wait_for_results_table(self, timeout: int | None = None) -> None:
-        self._require_driver()
-        wait = WebDriverWait(self.driver, timeout or self.timeout)
-        try:
-            wait.until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, "table, [role='grid'], .sapMList, .sapUiTable")
-                )
-            )
-            logger.info("Results area detected on screen")
-        except TimeoutException as exc:
-            raise SapClientError("Timed out waiting for enquiry results table") from exc
 
     def click_back_button(self) -> bool:
         """

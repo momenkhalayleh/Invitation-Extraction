@@ -4,12 +4,16 @@ from __future__ import annotations
 
 import logging
 
-from app.clients.database_client import get_database_client
+from app.clients.database_client import get_database_client, upsert_invitation
 from app.configs.settings import Settings, get_settings
-from app.controllers.invitation_controllers.invitation_repository import upsert_invitation
 from app.controllers.invitation_controllers.sap_invitation_extractor import SapInvitationExtractor
 from app.controllers.selenuim_client import SapClient, SapClientError
-from app.schemas.invitation import InvitationCreate
+from app.schemas.invitation import (
+    InvitationApiItem,
+    InvitationCreate,
+    InvitationExtractResponse,
+    InvitationSingleResponse,
+)
 
 logger = logging.getLogger("al_ghanem.extraction.invitations")
 
@@ -114,3 +118,27 @@ def extract_invitations_via_api(
 
     logger.info("Invitation extraction finished. Extracted %s record(s).", len(results))
     return results
+
+
+def run_invitation_extraction(
+    mode: str,
+    invitation_id: str | None = None,
+) -> InvitationSingleResponse | InvitationExtractResponse:
+    """
+    API-oriented extraction: always show the browser (headless=False),
+    then map domain results to API response models.
+
+    Raises InvitationNotFoundError / InvitationExtractionError for the routes layer
+    to translate into HTTP responses.
+    """
+    result = extract_invitations_via_api(
+        invitation_id=invitation_id,
+        mode=mode,
+        headless=False,
+    )
+
+    if isinstance(result, InvitationCreate):
+        return InvitationSingleResponse(data=InvitationApiItem.from_create(result))
+
+    items = [InvitationApiItem.from_create(invitation) for invitation in result]
+    return InvitationExtractResponse(mode=mode, data=items, count=len(items))

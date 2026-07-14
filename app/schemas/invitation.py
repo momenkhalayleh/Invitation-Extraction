@@ -84,3 +84,13 @@ def sanitize_invitation_id(raw: str) -> str:
 def is_valid_invitation_id(invitation_id: str) -> bool:
     """Return True if the ID matches the SAP Sales Inquiry format."""
     return bool(INVITATION_ID_PATTERN.match(invitation_id))
+
+
+def parse_optional_invitation_id(invitation_id: str | None) -> str | None:
+    """Return None when omitted; otherwise sanitize and validate. Raises ValueError if invalid."""
+    if invitation_id is None:
+        return None
+    cleaned = sanitize_invitation_id(invitation_id)
+    if not is_valid_invitation_id(cleaned):
+        raise ValueError("Invalid invitationId format")
+    return cleaned

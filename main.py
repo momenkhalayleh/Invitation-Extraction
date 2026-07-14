@@ -1,13 +1,12 @@
 import argparse
 import sys
 
-from alembic import command
-from alembic.config import Config
-
-from app.controllers.selenuim_client import SapClient, SapClientError
+from app.clients.database_client import upgrade_database
 from app.configs.run_logging import setup_logging
 from app.configs.settings import get_settings
 from app.controllers.invitation_controllers import InvitationExtractionError, extract_invitations
+from app.controllers.invitation_controllers.sap_invitation_extractor import SapInvitationExtractor
+from app.controllers.selenuim_client import SapClient, SapClientError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,13 +114,9 @@ def run_sap_test(args: argparse.Namespace) -> int:
         with SapClient(headless=headless) as client:
             client.login()
             logger.info("Login OK — title: %s", client.page_title)
-            client.ensure_launchpad()
-            client.navigate_to_manage_sales_enquiries()
+            extractor = SapInvitationExtractor(client)
+            extractor.prepare_search(mode="today")
             logger.info("Navigation OK — URL: %s", client.current_url)
-
-            client.apply_invitation_today_filter()
-            client.click_go()
-            client.wait_for_results_table()
 
             client.keep_open(args.keep_open)
     except SapClientError:
@@ -135,8 +130,7 @@ def run_sap_test(args: argparse.Namespace) -> int:
 def run_db_upgrade() -> int:
     logger = setup_logging(run_name="db_upgrade")
     logger.info("Applying database migrations...")
-    alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+    upgrade_database()
     logger.info("Database migrations applied successfully.")
     return 0
 

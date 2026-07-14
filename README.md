@@ -22,7 +22,8 @@ pip install -r requirements.txt
 CREATE DATABASE al_ghanem_extraction;
 ```
 
-4. Apply migrations:
+4. Migrations run automatically when the API starts (`python main.py api serve`).
+   You can still apply them manually:
 
 ```bash
 python main.py db upgrade

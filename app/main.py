@@ -1,8 +1,19 @@
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.routes.invitations import router as invitations_router
+from app.clients.database_client import upgrade_database
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Run Alembic migrations once when the API process starts."""
+    upgrade_database()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -14,6 +25,7 @@ def create_app() -> FastAPI:
             "GET /api/invitations/today | /yesterday | /all"
         ),
         version="0.2.0",
+        lifespan=lifespan,
     )
     app.include_router(invitations_router, prefix="/api")
 
@@ -24,7 +36,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
-        _request: Request, exc: RequestValidationError
+        _request: Request, _exc: RequestValidationError
     ) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "Invalid request parameters"})
 

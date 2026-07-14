@@ -1,6 +1,5 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from functools import lru_cache
 import logging
 
@@ -11,8 +10,6 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.configs.settings import PROJECT_ROOT, get_settings
-from app.models import Invitation
-from app.schemas.invitation import InvitationCreate
 
 logger = logging.getLogger("al_ghanem.extraction.db")
 
@@ -42,22 +39,6 @@ class DatabaseClient:
             raise
         finally:
             db_session.close()
-
-
-def upsert_invitation(session: Session, data: InvitationCreate) -> Invitation:
-    invitation = session.get(Invitation, data.inv_ref)
-    payload = data.model_dump()
-
-    if invitation is None:
-        invitation = Invitation(**payload)
-        session.add(invitation)
-        return invitation
-
-    for field, value in payload.items():
-        setattr(invitation, field, value)
-
-    invitation.updated_at = datetime.now(timezone.utc)
-    return invitation
 
 
 def _reset_schema_if_tables_missing(database_url: str) -> None:

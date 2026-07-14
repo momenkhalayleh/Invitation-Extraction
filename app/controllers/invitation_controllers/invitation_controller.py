@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import logging
 
-from app.clients.database_client import get_database_client, upsert_invitation
+from app.clients.database_client import get_database_client
 from app.configs.settings import Settings, get_settings
 from app.controllers.invitation_controllers.sap_invitation_extractor import SapInvitationExtractor
 from app.controllers.login_controller import LoginController
 from app.controllers.selenuim_client import SapClient, SapClientError
+from app.models import Invitation
 from app.schemas.invitation import (
     InvitationApiItem,
     InvitationCreate,
@@ -96,14 +97,14 @@ def extract_invitations_via_api(
             if invitation_id:
                 invitation = extractor.extract_by_ref(invitation_id)
                 with db_client.session() as session:
-                    upsert_invitation(session, invitation)
+                    Invitation.upsert(session, invitation)
                 logger.info("Extracted invitation %s via API", invitation.inv_ref)
                 return invitation
 
             results: list[InvitationCreate] = []
             with db_client.session() as session:
                 for invitation in extractor.iter_invitations(max_count=limit):
-                    upsert_invitation(session, invitation)
+                    Invitation.upsert(session, invitation)
                     results.append(invitation)
                     logger.info(
                         "Extracted invitation %s (%s/%s)",

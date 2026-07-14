@@ -1,10 +1,11 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import Date, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.schemas.invitation import InvitationCreate
 
 
 class Invitation(Base, TimestampMixin):
@@ -20,6 +21,22 @@ class Invitation(Base, TimestampMixin):
 
     cases: Mapped[list["Case"]] = relationship(back_populates="invitation")
     rfq_items: Mapped[list["RfqItem"]] = relationship(back_populates="invitation")
+
+    @classmethod
+    def upsert(cls, session: Session, data: InvitationCreate) -> "Invitation":
+        invitation = session.get(cls, data.inv_ref)
+        payload = data.model_dump()
+
+        if invitation is None:
+            invitation = cls(**payload)
+            session.add(invitation)
+            return invitation
+
+        for field, value in payload.items():
+            setattr(invitation, field, value)
+
+        invitation.updated_at = datetime.now(timezone.utc)
+        return invitation
 
 
 class Case(Base, TimestampMixin):

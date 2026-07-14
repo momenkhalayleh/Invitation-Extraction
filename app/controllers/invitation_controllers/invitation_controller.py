@@ -7,6 +7,7 @@ import logging
 from app.clients.database_client import get_database_client, upsert_invitation
 from app.configs.settings import Settings, get_settings
 from app.controllers.invitation_controllers.sap_invitation_extractor import SapInvitationExtractor
+from app.controllers.login_controller import LoginController
 from app.controllers.selenuim_client import SapClient, SapClientError
 from app.schemas.invitation import (
     InvitationApiItem,
@@ -88,7 +89,7 @@ def extract_invitations_via_api(
 
     try:
         with SapClient(headless=headless, settings=config) as sap_client:
-            sap_client.login()
+            LoginController(sap_client).login()
             extractor = SapInvitationExtractor(sap_client)
             extractor.prepare_search(mode=selected_mode)
 

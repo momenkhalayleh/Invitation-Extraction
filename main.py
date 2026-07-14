@@ -6,6 +6,7 @@ from app.configs.run_logging import setup_logging
 from app.configs.settings import get_settings
 from app.controllers.invitation_controllers import InvitationExtractionError, extract_invitations
 from app.controllers.invitation_controllers.sap_invitation_extractor import SapInvitationExtractor
+from app.controllers.login_controller import LoginController
 from app.controllers.selenuim_client import SapClient, SapClientError
 
 
@@ -112,7 +113,7 @@ def run_sap_test(args: argparse.Namespace) -> int:
 
     try:
         with SapClient(headless=headless) as client:
-            client.login()
+            LoginController(client).login()
             logger.info("Login OK — title: %s", client.page_title)
             extractor = SapInvitationExtractor(client)
             extractor.prepare_search(mode="today")

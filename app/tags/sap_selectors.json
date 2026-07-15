@@ -324,8 +324,16 @@
   "WEBGUI_FIELD_INPUTS": {
     "customer_ref": [
       [
+        "xpath",
+        "//input[contains(@lsdata,'KUAGV-KUNNR') and @title='Sold-to Party']"
+      ],
+      [
+        "xpath",
+        "//input[contains(@lsdata,'KUAGV-KUNNR')]"
+      ],
+      [
         "css selector",
-        "input[title='Customer Reference']"
+        "input[title='Sold-to Party']"
       ]
     ],
     "customer_name": [
@@ -381,9 +389,8 @@
   },
   "WEBGUI_LABEL_FRAGMENTS": {
     "customer_ref": [
-      "ust. Reference",
-      "Customer Reference",
-      "Cust. Reference"
+      "Sold-to Party",
+      "KUAGV-KUNNR"
     ]
   },
   "WEBGUI_LABEL_VALUE_FIELDS": [

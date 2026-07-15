@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     api_host: str = Field(default="127.0.0.1", validation_alias="API_HOST")
     api_port: int = Field(default=8000, validation_alias="API_PORT")
 
+    app_name: str = Field(
+        default="Al Ghanem Extraction API",
+        validation_alias="APP_NAME",
+    )
+    docs_username: str = Field(default="admin", validation_alias="DOCS_USERNAME")
+    docs_password: str = Field(default="changeme", validation_alias="DOCS_PASSWORD")
+
 
 @lru_cache
 def get_settings() -> Settings:

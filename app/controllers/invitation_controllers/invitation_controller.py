@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 from app.clients.database_client import get_database_client
 from app.configs.settings import Settings, get_settings
@@ -21,6 +22,9 @@ logger = logging.getLogger("al_ghanem.extraction.invitations")
 
 INVITATION_MODES = frozenset({"today", "yesterday", "all"})
 
+# SAP Sales Inquiry ID format (e.g. UAE1401324, QA15001104).
+INVITATION_ID_PATTERN = re.compile(r"^[A-Z]{2,4}\d{6,10}$")
+
 
 class InvitationExtractionError(Exception):
     """Raised when invitation extraction cannot run."""
@@ -28,6 +32,31 @@ class InvitationExtractionError(Exception):
 
 class InvitationNotFoundError(InvitationExtractionError):
     """Raised when the requested invitation ID is not in SAP search results."""
+
+
+def sanitize_invitation_id(raw: str) -> str:
+    """Strip, uppercase, and reject unsafe characters from invitationId input."""
+    cleaned = raw.strip().upper()
+    if not cleaned or len(cleaned) > 64:
+        raise ValueError("Invalid invitationId format")
+    if not cleaned.isalnum():
+        raise ValueError("Invalid invitationId format")
+    return cleaned
+
+
+def is_valid_invitation_id(invitation_id: str) -> bool:
+    """Return True if the ID matches the SAP Sales Inquiry format."""
+    return bool(INVITATION_ID_PATTERN.match(invitation_id))
+
+
+def parse_optional_invitation_id(invitation_id: str | None) -> str | None:
+    """Return None when omitted; otherwise sanitize and validate. Raises ValueError if invalid."""
+    if invitation_id is None:
+        return None
+    cleaned = sanitize_invitation_id(invitation_id)
+    if not is_valid_invitation_id(cleaned):
+        raise ValueError("Invalid invitationId format")
+    return cleaned
 
 
 def _normalize_mode(mode: str | None) -> str:

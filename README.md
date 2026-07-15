@@ -22,44 +22,20 @@ pip install -r requirements.txt
 CREATE DATABASE al_ghanem_extraction;
 ```
 
-4. Migrations run automatically when the API starts (`python main.py api serve`).
+4. Migrations run automatically when the API starts (see step 5).
    You can still apply them manually:
 
 ```bash
-python main.py db upgrade
+python -c "from app.clients.database_client import upgrade_database; upgrade_database()"
 ```
 
-5. Test SAP Fiori login and navigation (Document Date = Today):
+5. Start the API server:
 
 ```bash
-python main.py sap test --visible --keep-open 10
+uvicorn main:app --host 127.0.0.1 --port 8000
 ```
 
-6. Run invitation extraction:
-
-```bash
-# Document Date = Today (default)
-python main.py extract invitations --visible --mode today
-
-# Document Date = Yesterday
-python main.py extract invitations --visible --mode yesterday
-
-# No date filter — Go only
-python main.py extract invitations --visible --mode all
-```
-
-7. Start the API server:
-
-```bash
-python main.py api serve
-```
-
-8. Run other extraction jobs:
-
-```bash
-python main.py extract invitations
-python main.py extract cases
-```
+Swagger UI: http://127.0.0.1:8000/docs
 
 ## API
 
@@ -72,7 +48,7 @@ python main.py extract cases
 Optional query param on each: `invitationId` (e.g. `UAE1401324`).
 
 ```bash
-python main.py api serve
+uvicorn main:app --host 127.0.0.1 --port 8000
 
 curl http://127.0.0.1:8000/api/invitations/today
 curl http://127.0.0.1:8000/api/invitations/yesterday

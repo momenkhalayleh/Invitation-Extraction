@@ -7,18 +7,18 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.configs.settings import get_settings
 from app.controllers.invitation_controllers import (
     InvitationExtractionError,
     InvitationNotFoundError,
 )
-from app.main import create_app
+from app.main import app
 from app.schemas.invitation import InvitationCreate
 
 
 @pytest.fixture
 def client() -> Generator[TestClient, None, None]:
-    with patch("app.main.upgrade_database"):
-        app = create_app()
+    with patch("app.configs.swagger.upgrade_database"):
         with TestClient(app, raise_server_exceptions=False) as test_client:
             yield test_client
 
@@ -120,3 +120,22 @@ def test_sap_error(client: TestClient) -> None:
 
     assert response.status_code == 400
     assert "Yesterday" in response.json()["error"]
+
+
+def test_docs_requires_authentication(client: TestClient) -> None:
+    assert client.get("/docs").status_code == 401
+    assert client.get("/redoc").status_code == 401
+    assert client.get("/openapi.json").status_code == 401
+
+
+def test_docs_with_valid_credentials(client: TestClient) -> None:
+    settings = get_settings()
+    auth = (settings.docs_username, settings.docs_password)
+
+    assert client.get("/docs", auth=auth).status_code == 200
+    assert client.get("/redoc", auth=auth).status_code == 200
+    assert client.get("/openapi.json", auth=auth).status_code == 200
+
+
+def test_docs_rejects_invalid_credentials(client: TestClient) -> None:
+    assert client.get("/docs", auth=("wrong", "credentials")).status_code == 401

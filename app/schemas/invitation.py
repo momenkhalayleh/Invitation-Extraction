@@ -1,10 +1,6 @@
-import re
 from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, Field
-
-# SAP Sales Inquiry ID format (e.g. UAE1401324, QA15001104).
-INVITATION_ID_PATTERN = re.compile(r"^[A-Z]{2,4}\d{6,10}$")
 
 
 class InvitationBase(BaseModel):
@@ -69,28 +65,3 @@ class InvitationExtractResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: str
-
-
-def sanitize_invitation_id(raw: str) -> str:
-    """Strip, uppercase, and reject unsafe characters from invitationId input."""
-    cleaned = raw.strip().upper()
-    if not cleaned or len(cleaned) > 64:
-        raise ValueError("Invalid invitationId format")
-    if not cleaned.isalnum():
-        raise ValueError("Invalid invitationId format")
-    return cleaned
-
-
-def is_valid_invitation_id(invitation_id: str) -> bool:
-    """Return True if the ID matches the SAP Sales Inquiry format."""
-    return bool(INVITATION_ID_PATTERN.match(invitation_id))
-
-
-def parse_optional_invitation_id(invitation_id: str | None) -> str | None:
-    """Return None when omitted; otherwise sanitize and validate. Raises ValueError if invalid."""
-    if invitation_id is None:
-        return None
-    cleaned = sanitize_invitation_id(invitation_id)
-    if not is_valid_invitation_id(cleaned):
-        raise ValueError("Invalid invitationId format")
-    return cleaned

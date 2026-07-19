@@ -135,62 +135,70 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "cases",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("case_ref", sa.String(length=64), nullable=False),
-        sa.Column("inv_ref", sa.String(length=64), nullable=False),
-        sa.Column(
-            "overview_data",
-            postgresql.JSONB(astext_type=sa.Text()),
-            nullable=False,
-        ),
-        sa.Column(
-            "extracted_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.ForeignKeyConstraint(["inv_ref"], ["invitations.inv_ref"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("case_ref"),
-    )
-    op.create_index(op.f("ix_cases_inv_ref"), "cases", ["inv_ref"], unique=False)
+    "cases",
+    sa.Column("case_reference", sa.String(), nullable=False),
+    sa.Column("sales_inquiry", sa.String(length=64), nullable=False),
+    sa.Column("product_type", sa.String(length=64), nullable=False),
+    sa.Column("status", sa.String(length=64)),
+    sa.Column("closing_date", sa.Date()),
+    sa.Column("customer", sa.String()),
+    sa.Column("subject", sa.String()),
+    sa.Column("special_stage", sa.String()),
+    sa.Column("client_reference", sa.String()),
+    sa.Column("created_by", sa.String()),
+    sa.Column("invitation_type", sa.String()),
+    sa.Column("registration_date", sa.Date()),
+    sa.Column("responsible_engineer", sa.String()),
+    sa.Column("stage", sa.String()),
+    sa.Column(
+        "extracted_at",
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        nullable=False,
+    ),
+    sa.Column(
+        "updated_at",
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        nullable=False,
+    ),
+    sa.ForeignKeyConstraint(
+        ["sales_inquiry"],
+        ["invitations.inv_ref"],
+        ondelete="CASCADE",
+    ),
+    sa.PrimaryKeyConstraint("case_reference"),
+)
 
     op.create_table(
-        "rfq_items",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("inv_ref", sa.String(length=64), nullable=False),
-        sa.Column("case_id", sa.Integer(), nullable=False),
-        sa.Column("line_number", sa.Integer(), nullable=True),
-        sa.Column(
-            "item_data",
-            postgresql.JSONB(astext_type=sa.Text()),
-            nullable=False,
-        ),
-        sa.Column(
-            "extracted_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.ForeignKeyConstraint(["case_id"], ["cases.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["inv_ref"], ["invitations.inv_ref"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(op.f("ix_rfq_items_case_id"), "rfq_items", ["case_id"], unique=False)
-    op.create_index(op.f("ix_rfq_items_inv_ref"), "rfq_items", ["inv_ref"], unique=False)
+    "rfq_items",
+    sa.Column("item", sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column("material", sa.String(), nullable=False),
+    sa.Column("material_group", sa.String(), nullable=False),
+    sa.Column("product_type", sa.String(), nullable=False),
+    sa.Column("quantity", sa.String(), nullable=False),
+    sa.Column("item_note", sa.String(), nullable=True),
+    sa.Column("plant", sa.String(), nullable=False),
+    sa.Column(
+        "extracted_at",
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        nullable=False,
+    ),
+    sa.Column(
+        "updated_at",
+        sa.DateTime(timezone=True),
+        server_default=sa.text("now()"),
+        nullable=False,
+    ),
+    sa.ForeignKeyConstraint(
+        ["product_type"],
+        ["product_type.product_type_id"],
+        ondelete="CASCADE",
+    ),
+    sa.PrimaryKeyConstraint("item"),
+)
+ 
 
     
 

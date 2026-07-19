@@ -14,7 +14,7 @@ from app.configs.settings import PROJECT_ROOT, get_settings
 logger = logging.getLogger("al_ghanem.extraction.db")
 
 # Tables created by migration 001 — if any are missing, stamp is stale.
-_REQUIRED_TABLES = ("invitations", "cases", "rfq_items")
+_REQUIRED_TABLES = ("invitations", "cases", "rfq_items","product_type")
 
 
 class DatabaseClient:

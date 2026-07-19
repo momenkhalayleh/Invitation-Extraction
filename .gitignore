@@ -9,3 +9,6 @@ logs/
 .ruff_cache/
 htmlcov/
 .coverage
+tests/
+
+

@@ -1,10 +1,18 @@
 from datetime import date, datetime, timezone
 
+from sqlalchemy import ForeignKey
+
 from sqlalchemy import Date, String, Text
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.models.base import Base, TimestampMixin
 from app.schemas.invitation import InvitationCreate
+
+class ProductType(Base):
+    __tablename__ = "product_type"
+
+    product_type_id: Mapped[str] = mapped_column(primary_key=True)
+    product_type_description: Mapped[str] = mapped_column(String(128), nullable=False)
 
 
 class Invitation(Base, TimestampMixin):
@@ -15,7 +23,7 @@ class Invitation(Base, TimestampMixin):
     customer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     scope_of_work: Mapped[str | None] = mapped_column(Text, nullable=True)
     inv_subject: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    product_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    product_type: Mapped[str] = mapped_column(String(128),ForeignKey("product_type.product_type_id"), nullable=False)
     closing_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     @classmethod

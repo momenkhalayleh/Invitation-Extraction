@@ -43,7 +43,7 @@ class SapInvitationExtractor:
 
     def prepare_search(self, mode: str = "today") -> None:
         self.client.ensure_launchpad()
-        self.navigate_to_manage_sales_enquiries()
+        #self.navigate_to_manage_sales_enquiries()
 
         normalized = (mode or "today").strip().lower()
         if normalized == "today":
@@ -196,7 +196,7 @@ class SapInvitationExtractor:
             logger.warning("Go button not found; selectors may need updating")
             return
         go_button.click()
-        time.sleep(0.5)
+        time.sleep(2)
         logger.info("Clicked Go to load enquiry results")
 
     def wait_for_results_table(self, timeout: int | None = None) -> None:
@@ -247,7 +247,8 @@ class SapInvitationExtractor:
             processed_refs.add(ref_hint)
 
             try:
-                self._open_inquiry(link)
+                self._open_inquiry(link) 
+                self.wait_for_results_table()
                 if not self._click_change_view():
                     logger.warning("'Change Sales Inquiries' link not found for %s", ref_hint)
                 if not self.open_custom_fields_section():
